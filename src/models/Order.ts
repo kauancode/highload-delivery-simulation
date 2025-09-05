@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface IOrder extends Document {
+  _id: Types.ObjectId;
   createdAt: Date;
   customerId: string;
   items: { productId: string; quantity: number }[];
