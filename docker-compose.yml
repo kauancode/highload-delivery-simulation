@@ -7,9 +7,11 @@ services:
     depends_on:
       - mongodb
       - redis
+      - rabbitmq
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://rabbitmq
     command: npm run dev
 
   mongodb:
@@ -21,3 +23,9 @@ services:
     image: redis:alpine
     ports:
       - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
