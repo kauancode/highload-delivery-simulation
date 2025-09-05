@@ -1,16 +1,18 @@
 import { type Request, type Response } from "express";
 
-import redis from '@/config/redis';
+import redis, { DEFAULT_CACHE_TTL } from '@/config/redis';
 import Order from "@/models/Order";
+import { publishOrder } from "@/queue/orderProducer";
 
-const ORDER_CACHE_TTL = 300;
 
 export async function createOrder(req: Request, res: Response) {
   try {
     const order = new Order(req.body);
     await order.save();
+
+    await publishOrder(order);
         
-    await redis.setex(`order:${order.id as string}`, ORDER_CACHE_TTL, JSON.stringify(order));
+    await redis.setex(`order:${order.id as string}`, DEFAULT_CACHE_TTL, JSON.stringify(order));
 
     res.status(201).json(order);
   } catch (err: unknown) {
@@ -33,7 +35,7 @@ export async function getOrderById(req: Request, res: Response) {
     const cachedOrder = await redis.get(`order:${id}`);
     
     if (cachedOrder) {
-      console.log("📌 Cache hit!");
+      console.log("📌[Redis] Cache hit!");
       return res.json(JSON.parse(cachedOrder));
     }
 
