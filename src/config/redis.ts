@@ -11,7 +11,8 @@ const timestamp = () => new Date().toISOString();
 redis.on('connect', ()=> {
  console.log(
     `✅ [Redis] Conectado com sucesso em ${redis.options.host}:${redis.options.port} - ${timestamp()}`
-  );})
+  );
+})
 
 redis.on("error", (err) => {
   console.error(`❌ [Redis] Erro de conexão: ${err.message} - ${timestamp}`);
