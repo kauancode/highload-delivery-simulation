@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://i.imgur.com/nTK5nYi.png" alt="Highload Delivery Simulation" />
+  <img src="https://i.imgur.com/dkanm7o.png" alt="Highload Delivery Simulation" />
 
   # Highload Delivery Simulation  
 
