@@ -1,16 +1,25 @@
+import http from "http";
 import mongoose from "mongoose";
+import { Server } from "socket.io";
 
 import app from "./app";
 import { connectRabbitMQ } from "./config/rabbitmq";
+import { setupSockets } from "./config/socket";
 import { consumeOrders } from "./queue/orderConsumer";
 
 const PORT = process.env.PORT ?? "3000";
 const MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017/delivery";
 
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
 const start = async () => {
   try {
     await mongoose.connect(MONGO_URI);
-
+    
     await connectRabbitMQ();
     await consumeOrders();
 
@@ -23,4 +32,8 @@ const start = async () => {
   }
 };
 
+setupSockets(io);
 await start();
+
+export { io, server };
+
