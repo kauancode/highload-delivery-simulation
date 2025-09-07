@@ -3,6 +3,7 @@ import { type Request, type Response } from "express";
 import redis, { DEFAULT_CACHE_TTL } from '@/config/redis';
 import Order from "@/models/Order";
 import { publishOrder } from "@/queue/orderProducer";
+import { io } from "@/server";
 
 
 export async function createOrder(req: Request, res: Response) {
@@ -11,6 +12,7 @@ export async function createOrder(req: Request, res: Response) {
     await order.save();
 
     await publishOrder(order);
+    io.to(`restaurant:${order.restaurantId.toString()}`).emit("newOrder", order);
         
     await redis.setex(`order:${order.id as string}`, DEFAULT_CACHE_TTL, JSON.stringify(order));
 
