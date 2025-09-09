@@ -23,7 +23,7 @@ const start = async () => {
     await connectRabbitMQ();
     await consumeOrders();
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 [Server] Executando na porta ${PORT}`);
     });
   } catch (err) {
