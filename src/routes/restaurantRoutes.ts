@@ -1,10 +1,11 @@
 import { Router } from "express";
 
-import { createRestaurant, getRestaurantById } from "../controllers/restaurantController";
+import { createRandomRestaurant, createRestaurant, getRestaurantById } from "../controllers/restaurantController";
 
 const router = Router();
 
-router.post("/", createRestaurant);
 router.get("/:id", getRestaurantById);
+router.post("/random", createRandomRestaurant);
+router.post("/", createRestaurant);
 
 export default router;
