@@ -1,0 +1,57 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 10
+      name: "Aquecimento"
+    - duration: 30
+      arrivalRate: 20
+      name: "Tráfego médio"
+    - duration: 30
+      arrivalRate: 40
+      name: "Tráfego alto"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "./processor.cjs"
+
+scenarios:
+  - name: "Fluxo completo de pedido"
+    flow:
+      - function: "fetchRandomRestaurant"
+      - function: "setRandomCustomer"
+      - function: "setRandomAddress"
+      - function: "setRandomProducts"
+      - post:
+          url: "/orders"
+          json:
+            customerId: "{{ customerId }}"
+            restaurantId: "{{ restaurantId }}"
+            items: "{{ items }}"
+            address: "{{ address }}"
+          capture:
+            - json: "$._id"
+              as: orderId
+      - think: 5
+      - function: "checkOrderStatus"
+
+  - name: "Cliente impaciente"
+    flow:
+      - function: "fetchRandomRestaurant"
+      - function: "setRandomCustomer"
+      - function: "setRandomAddress"
+      - function: "setRandomProducts"
+      - post:
+          url: "/orders"
+          json:
+            customerId: "{{ customerId }}"
+            restaurantId: "{{ restaurantId }}"
+            items: "{{ items }}"
+          capture:
+            - json: "$._id"
+              as: orderId
+      - loop:
+          - count: 3
+            steps:
+              - think: 2
+              - function: "checkOrderStatus"
