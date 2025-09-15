@@ -42,6 +42,19 @@ export async function createRestaurant(req: Request, res: Response) {
   }
 }
 
+export async function getAllRestaurants(req: Request, res: Response) {
+  try {
+    const restaurants = await Restaurant.find();
+    res.json(restaurants);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.status(500).json({ error: "Erro desconhecido" });
+    }
+  }
+}
+
 export async function getRestaurantById(req: Request, res: Response) {
   try {
     const restaurant = await Restaurant.findById(req.params.id);
