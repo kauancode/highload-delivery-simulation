@@ -1,6 +1,32 @@
+import { faker } from "@faker-js/faker";
 import { type Request, type Response } from "express";
 
 import Restaurant from "../models/Restaurant";
+
+export async function createRandomRestaurant(req: Request, res: Response) {
+  try {
+    const products = Array.from({ length: faker.number.int({ max: 6, min: 2 }) }).map(() => ({
+      name: faker.food.dish(),
+      price: faker.number.float({ fractionDigits: 2, max: 100, min: 5 }),
+      productId: faker.string.uuid()
+    }));
+
+    const restaurant = new Restaurant({
+      address: faker.location.streetAddress(),
+      name: faker.company.name(),
+      products
+    });
+
+    await restaurant.save();
+    res.status(201).json(restaurant);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.status(500).json({ error: "Erro desconhecido" });
+    }
+  }
+}
 
 export async function createRestaurant(req: Request, res: Response) {
   try {
