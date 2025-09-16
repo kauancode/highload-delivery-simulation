@@ -219,8 +219,8 @@ Sempre que o status de um pedido é atualizado (**updateOrderStatus**):
 
 ```javascript
 io.to(`customer:${updatedOrder.customerId}`).emit("orderUpdated", updatedOrder);
-Todos os clientes conectados na sala recebem imediatamente a atualização.
 ```
+Todos os clientes conectados na sala recebem imediatamente a atualização.
 
 
 ---
