@@ -4,17 +4,24 @@ config:
     - duration: 30
       arrivalRate: 10
       name: "Aquecimento"
+    - duration: 60
+      arrivalRate: 30
+      rampTo: 60
+      name: "Escalada"
     - duration: 30
-      arrivalRate: 20
-      name: "Tráfego médio"
-    - duration: 30
-      arrivalRate: 40
-      name: "Tráfego alto"
+      arrivalRate: 80
+      name: "Estresse"
   defaults:
     headers:
       Content-Type: "application/json"
   processor: "./processor.cjs"
-
+  ensure:
+    - condition: "http.response_time.p95 < 1000"
+      message: "95% das requisições devem responder em < 1s"
+    - condition: "http.response_time.max < 3000"
+      message: "Nenhuma requisição pode ultrapassar 3s"
+    - condition: "http.codes.200.rate > 0.95"
+      message: "Mais de 95% das respostas devem ser 200"
 scenarios:
   - name: "Fluxo completo de pedido"
     flow:
@@ -34,7 +41,6 @@ scenarios:
               as: orderId
       - think: 5
       - function: "checkOrderStatus"
-
   - name: "Cliente impaciente"
     flow:
       - function: "fetchRandomRestaurant"
