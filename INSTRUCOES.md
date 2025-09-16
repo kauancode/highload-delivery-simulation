@@ -1,6 +1,6 @@
 # Instruções do Desafio – Highload Delivery Simulation
 
-> Este documento detalha as informações de arquitetura e teste do sistema de delivery escalável, com seus endpoints e fluxos de trabalho.
+Este documento detalha as informações de arquitetura e teste do sistema de delivery escalável, com seus endpoints e fluxos de trabalho.
 
 ---
 
@@ -12,8 +12,8 @@
     - 4.1 [Criar Pedido](#41-criar-pedido)
     - 4.2 [Consultar Status](#42-consultar-status-do-pedido)
     - 4.3 [Atualização de Status](#43-atualização-de-status-pelo-worker)
-    - 4.4 [Notificações](#44-conexão-de-notificações)
-5. [Teste de carga](#5-teste-de-carga)
+5. [Notificações](#5-notificações-em-tempo-real)
+6. [Teste de carga](#6-teste-de-carga)
 
 ---
 
@@ -143,41 +143,88 @@
 
 ### 4.3. Atualização de Status pelo Worker
 
-- **Descrição:** Um worker processa as atualizações de status dos pedidos.
+**Descrição:**
+Um worker processa as atualizações de status dos pedidos de forma assíncrona, simulando o fluxo real de preparação e entrega. Ele garante que cada pedido tenha seu status atualizado no banco de dados e em cache, além de notificar clientes em tempo real.
 
-#### Status do Pedido
-| Status             | Descrição                       |
-|------------------|---------------------------------|
-| PREPARING         | Pedido está sendo preparado.     |
-| OUT_FOR_DELIVERY  | Pedido saiu para entrega.        |
-| DELIVERED         | Pedido foi entregue ao cliente.  |
+**Status do pedido**
+| Status             | Descrição                        |
+|--------------------|----------------------------------|
+| `PREPARING`        | Pedido está sendo preparado      |
+| `OUT_FOR_DELIVERY	`| Pedido saiu para entrega         |
+| `DELIVERED`        | Pedido foi entregue ao cliente   |
 
-#### Fluxo do Worker
-1. Consome a fila do restaurante.  
-2. Atualiza status do pedido.  
-3. Persiste no MongoDB e atualiza Redis.  
-4. Dispara notificação em tempo real.  
 
----
+**Fluxo do Worker**
+1. Consome a fila do restaurante;
 
-### 4.4. Conexão de Notificações
+2. O **worker** recebe o orderId do pedido que precisa ser processado;
 
-- **Endpoint:** `/notifications/stream?userId=xxx`  
-- **Descrição:** Conexão para receber atualizações em tempo real via SSE (Server-Sent Events) ou WebSocket.
+3. Atualiza status do pedido;
 
-#### Exemplo de Evento SSE
-```json
-{
-  "type": "ORDER_STATUS_UPDATE",
-  "orderId": "order123",
-  "status": "OUT_FOR_DELIVERY",
-  "timestamp": "2025-09-02T15:22:00Z"
-}
+4. Para cada pedido, ele percorre uma sequência de status:
+
+> ```PREPARING → OUT_FOR_DELIVERY → DELIVERED```
+> <br>Entre cada atualização, há um **delay aleatório**  entre 3 e 8 segundos, simulando o tempo real de preparação e entrega.
+
+5. Atualiza o pedido no **MongoDB**;
+
+6. Atualiza o Redis **(cache rápido)** para refletir o novo status;
+
+7. Dispara **notificação em tempo real**;
+> Sempre que um status é atualizado, o sistema pode enviar notificações para clientes ou dashboards, mantendo todos informados sobre o andamento do pedido.
+
+*Exemplo de log do worker*
+```bash
+🚚 [Worker] Processando pedido 12345
+🔄 [Worker] Pedido 12345 atualizado para "PREPARING" (após 4321ms)
+🔄 [Worker] Pedido 12345 atualizado para "OUT_FOR_DELIVERY" (após 6789ms)
+🔄 [Worker] Pedido 12345 atualizado para "DELIVERED" (após 3456ms)
 ```
 
+**Observações importantes**
+
+O worker é **assíncrono**, garantindo que múltiplos pedidos possam ser processados em paralelo.<br>
+Qualquer erro durante a atualização é capturado e logado, evitando que o processamento de outros pedidos seja interrompido.
+> *O delay aleatório ajuda a simular o tempo real de entrega, tornando os testes mais realistas.*
+
 ---
 
-## 5. Teste de Carga
+## 5. Notificações em tempo real
+
+**Descrição:** Os clientes **(usuários ou restaurantes)** recebem atualizações de status dos pedidos em tempo real via WebSocket.
+
+**Fluxo das Notificações**
+
+#### 1. Conexão do Cliente
+
+O cliente se conecta diretamente ao servidor **Socket.IO**, enviando **query params**:
+
+- **Clientes:** `customerId`
+- **Restaurantes:** `restaurantId`
+
+O servidor cria salas específicas para cada usuário:
+
+- **Clientes:** `customer:{customerId}`
+- **Restaurantes:** `restaurant:{restaurantId}`
+
+> Isso garante que cada usuário receba apenas notificações relevantes.
+
+##### 2. Recebendo Notificações
+
+Sempre que o status de um pedido é atualizado (**updateOrderStatus**):
+
+1. O pedido é atualizado no **MongoDB**.
+2. O **cache** é atualizado no **Redis**.
+3. O evento `orderUpdated` é emitido para a sala do cliente correspondente:
+
+```javascript
+io.to(`customer:${updatedOrder.customerId}`).emit("orderUpdated", updatedOrder);
+Todos os clientes conectados na sala recebem imediatamente a atualização.
+```
+
+
+---
+
+## 6. Teste de Carga
   - **Pedidos simultâneos:** Simular milhares de pedidos em diferentes restaurantes.
   - **Consultas de status:** Simular consultas frequentes do status do pedido.
-  - **Notificações:** Simular múltiplas conexões simultâneas para notificações em tempo real (SSE/WebSocket).
