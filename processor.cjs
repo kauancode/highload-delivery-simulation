@@ -27,7 +27,7 @@ module.exports = {
     userContext.vars.address = addresses[Math.floor(Math.random() * addresses.length)];
     return done();
   },
-
+  
   setRandomProducts: function (userContext, events, done) {
     const products = userContext.vars.restaurantProducts || [];
     if (!products.length) return done(new Error("Restaurante sem produtos"));
@@ -43,6 +43,11 @@ module.exports = {
   checkOrderStatus: function (userContext, events, done) {
     const orderId = userContext.vars.orderId;
     const ORDER_STATUS = ["RECEIVED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"]
+
+    if (!orderId) {
+      console.warn("⚠️ Nenhum orderId encontrado no contexto");
+      return done();
+    }
 
     axios.get(`http://localhost:3000/orders/${orderId}`)
       .then(res => {
